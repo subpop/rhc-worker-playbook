@@ -40,7 +40,6 @@ func RunPlaybook(id string, playbook []byte, correlationID string) (chan json.Ra
 	// Guard the events channel with a WaitGroup to ensure that all goroutines
 	// that need to send to it are finished before closing the channel.
 	var wg sync.WaitGroup
-	wg.Add(1)
 	events := make(chan json.RawMessage)
 
 	// publish an "executor_on_start" event to signal cloud connector that a run
@@ -64,7 +63,9 @@ func RunPlaybook(id string, playbook []byte, correlationID string) (chan json.Ra
 			log.Errorf("cannot marshal json: %v", err)
 			return
 		}
+		wg.Add(1)
 		events <- data
+		wg.Done()
 	}()
 
 	// started is a closure that's passed to the StartProcess function as its
@@ -146,7 +147,9 @@ func RunPlaybook(id string, playbook []byte, correlationID string) (chan json.Ra
 							continue
 						}
 
+						wg.Add(1)
 						events <- modifiedData
+						wg.Done()
 						log.Infof("event sent: event=%+v", event)
 					}
 				}
@@ -198,7 +201,9 @@ func RunPlaybook(id string, playbook []byte, correlationID string) (chan json.Ra
 							log.Errorf("cannot marshal JSON: %v", err)
 							continue
 						}
+						wg.Add(1)
 						events <- json.RawMessage(data)
+						wg.Done()
 					case "successful":
 					default:
 						log.Errorf("unsupported status case: %v", string(data))
